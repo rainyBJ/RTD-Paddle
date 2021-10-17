@@ -91,7 +91,7 @@ def get_args_parser():
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
         help='start epoch')
     parser.add_argument('--eval', action='store_true')
-    parser.add_argument('--num_workers', default=2, type=int)
+    parser.add_argument('--num_workers', default=0, type=int)
     parser.add_argument('--world_size', default=1, type=int, help=\
         'number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help=\

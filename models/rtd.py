@@ -42,7 +42,7 @@ class RTD(nn.Layer):
         features_flatten = samples.flatten(0, 1)
         projected_fts = self.input_proj(features_flatten.unsqueeze(-1).
             unsqueeze(-1))
-        projected_fts = projected_fts.view((bs, -1, self.hidden_dim // 2))
+        projected_fts = projected_fts.view(bs, -1, self.hidden_dim // 2)
         scaling_factor = 2
         s = s_e_scores[:, :, 0] * scaling_factor
         e = s_e_scores[:, :, 1] * scaling_factor
@@ -52,11 +52,12 @@ class RTD(nn.Layer):
         pos = self.position_embedding(locations)
         hs = self.transformer(features, self.query_embed.weight, pos)[0]
         outputs_class = self.class_embed(hs)
-        outputs_coord = self.bbox_embed(hs).sigmoid()
+        outputs_coord = self.bbox_embed(hs)
+        outputs_coord = paddle.nn.functional.sigmoid(outputs_coord)
         proposal_fts = hs[-1, :, :, :].permute(0, 2, 1)
         proposal_fts = self.iou_conv(proposal_fts)
         proposal_fts = proposal_fts.permute(0, 2, 1)
-        outputs_iou = self.iou_embed(proposal_fts).sigmoid()
+        outputs_iou = paddle.nn.functional.sigmoid(self.iou_embed(proposal_fts))
         out = {'pred_logits': outputs_class[-1], 'pred_boxes':
             outputs_coord[-1], 'pred_iou': outputs_iou}
         if self.aux_loss:
@@ -150,17 +151,17 @@ class SetCriterion(nn.Layer):
             pred_boxes_per_seg = pred_boxes[i, :, :]
             target_boxes_per_seg = targets[i]['boxes']
             if len(target_boxes_per_seg) == 0:
-                tiou = paddle.zeros(len(pred_boxes_per_seg)).requires_grad_(
-                    False).to(pred_boxes_per_seg.device)
+                tiou = paddle.zeros([len(pred_boxes_per_seg)]).requires_grad_(
+                    False).to(pred_boxes_per_seg.place)
             else:
                 tiou = box_ops.generalized_prop_iou(box_ops.prop_cl_to_se(
                     pred_boxes_per_seg), target_boxes_per_seg)
-                tiou = torch2paddle.max(tiou, dim=1)[0]
+                tiou = paddle.max(tiou, axis=1)
             tgt_iou.append(tiou)
         tgt_iou = paddle.stack(tgt_iou, axis=0).view(-1)
         preds_iou = preds_iou.view(-1)
         pos_ind = paddle.nonzero(tgt_iou > 0.7, as_tuple=True)[0]
-        m_ind = paddle.nonzero((tgt_iou <= 0.7) & (tgt_iou > 0.3), as_tuple=True)[0].squeeze(
+        m_ind = paddle.nonzero((tgt_iou <= 0.7).logical_and(tgt_iou > 0.3), as_tuple=True)[0].squeeze(
             ).cpu().detach().numpy()
         neg_ind = paddle.nonzero(tgt_iou < 0.3, as_tuple=True)[0].squeeze().cpu().detach(
             ).numpy()
@@ -199,7 +200,7 @@ class SetCriterion(nn.Layer):
         indices = self.matcher(outputs_without_aux, targets)
         num_boxes = sum(len(t['labels']) for t in targets)
         num_boxes = paddle.to_tensor(dtype=paddle.float32, data=[num_boxes],
-            place=next(iter(outputs.values())).device)
+            place=next(iter(outputs.values())).place)
         if is_dist_avail_and_initialized():
             paddle.distributed.all_reduce(num_boxes)
         num_boxes = paddle.clip(num_boxes / get_world_size(), min=1).item()
@@ -237,7 +238,7 @@ class PostProcess(nn.Layer):
         out_logits, out_bbox, out_iou = outputs['pred_logits'], outputs[
             'pred_boxes'], outputs['pred_iou']
         assert len(out_logits) == len(num_frames)
-        num_frames = num_frames.reshape((len(out_logits), 1))
+        num_frames = num_frames.reshape(len(out_logits), 1)
         prob = F.softmax(out_logits, -1)
         scores, labels = prob[..., :-1].max(-1)
         boxes = box_ops.prop_cl_to_se(out_bbox)

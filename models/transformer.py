@@ -44,12 +44,16 @@ class Transformer(nn.Layer):
         src = src.permute(1, 0, 2)
         pos_embed = pos_embed.permute(1, 0, 2)
         query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
-        tgt = paddle.full_like(query_embed).requires_grad_(False)
+        tgt = paddle.full_like(query_embed,fill_value=0).requires_grad_(False)
         src = torch2paddle.concat([src, pos_embed], dim=2)
         memory = self.encoder(src)
-        hs = self.decoder(tgt, memory, memory_key_padding_mask=None, pos=\
-            pos_embed, query_pos=query_embed)
-        return hs.transpose(1, 2), memory.permute(1, 2, 0).view(bs, c, t)
+        # Torch [sequence length, batch size, embedding dimension]
+        # 2
+        # Paddle [batch size, sequence length, embedding dimension]
+        hs = self.decoder(tgt.permute(1, 0, 2), memory.permute(1, 0, 2),
+                          memory_key_padding_mask=None, pos=pos_embed.permute(1, 0, 2),
+                          query_pos=query_embed.permute(1, 0, 2))
+        return hs, memory.permute(1, 2, 0).view(bs, c, t)
 
 
 class simpleMLP(nn.Layer):
@@ -173,13 +177,12 @@ class TransformerDecoderLayer(nn.Layer):
             tgt after self-attention and cross-attention.
         """
         q = k = self.with_pos_embed(tgt, query_pos)
-        tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
-            key_padding_mask=tgt_key_padding_mask)[0]
+        tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask)
         tgt = tgt + self.dropout1(tgt2)
         tgt = self.norm1(tgt)
-        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos
-            ), key=self.with_pos_embed(memory, pos), value=memory,
-            attn_mask=memory_mask, key_padding_mask=memory_key_padding_mask)[0]
+        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
+                                   key=self.with_pos_embed(memory, pos),
+                                   value=memory,attn_mask=memory_mask)
         tgt = tgt + self.dropout2(tgt2)
         tgt = self.norm2(tgt)
         tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))

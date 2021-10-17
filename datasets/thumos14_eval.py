@@ -29,7 +29,7 @@ def average_recall_vs_nr_proposals(proposals,
     for videoid in video_lst:
         prop_idx = proposals['video-name'] == videoid
         this_video_proposals = proposals[prop_idx][['f-init', 'f-end'
-                                                    ]].values.astype(np.float)
+                                                    ]].values.astype(float)
         sort_idx = proposals[prop_idx]['score'].argsort()[::-1]
         this_video_proposals = this_video_proposals[sort_idx, :]
         gt_idx = ground_truth['video-name'] == videoid

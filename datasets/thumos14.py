@@ -227,7 +227,7 @@ def get_args_parser():
 
 def LongTensor(x):
     if isinstance(x, int):
-        return paddle.to_tensor([x])
+        return paddle.to_tensor([x], dtype="int64")
     if isinstance(x, list):
         x = paddle.to_tensor(x, dtype="int64")
-    return x.astype("int64")
+    return x

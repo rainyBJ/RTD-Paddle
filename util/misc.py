@@ -2,6 +2,8 @@
 
 Mostly copy-paste from torchvision references.
 """
+import numpy
+import paddle
 import x2paddle
 from x2paddle import torch2paddle
 import datetime
@@ -13,7 +15,6 @@ from collections import defaultdict
 from collections import deque
 from typing import List
 from typing import Optional
-import paddle
 import x2paddle.torch2paddle as dist
 import torchvision
 from x2paddle.torch2paddle import create_tensor
@@ -57,8 +58,10 @@ class SmoothedValue(object):
 
     @property
     def median(self):
-        d = paddle.to_tensor(list(self.deque))
-        return d.median().item()
+        data = list(self.deque)
+        data_np = numpy.median(numpy.array(data))
+        d = float(paddle.to_tensor(data_np).item())
+        return d
 
     @property
     def avg(self):
@@ -78,11 +81,13 @@ class SmoothedValue(object):
         return self.deque[-1]
 
     def __str__(self):
+        # return self.fmt.format(median=self.median, avg=self.avg, global_avg
+        #     =self.global_avg, max=self.max, value=self.value)
         return self.fmt.format(median=self.median, avg=self.avg, global_avg
-            =self.global_avg, max=self.max, value=self.value)
+        =self.global_avg, max=self.max, value=self.value)
 
 
-'''
+
 def all_gather(data):
     """
     Run all_gather on arbitrary picklable data (not necessarily tensors)
@@ -95,7 +100,7 @@ def all_gather(data):
     if world_size == 1:
         return [data]
     buffer = pickle.dumps(data)
-    storage = paddorch.ByteStorage.from_buffer(buffer)
+    storage = torch2paddle.ByteStorage.from_buffer(buffer)
     tensor = torch2paddle.create_uint8_tensor(storage).to('cuda')
     local_size = paddle.to_tensor([tensor.numel()], device='cuda')
     size_list = [paddle.to_tensor([0], device='cuda') for _ in range(
@@ -117,7 +122,7 @@ def all_gather(data):
         buffer = tensor.cpu().numpy().tobytes()[:size]
         data_list.append(pickle.loads(buffer))
     return data_list
-'''
+
 
 def reduce_dict(input_dict, average=True):
     world_size = get_world_size()
@@ -145,8 +150,8 @@ class MetricLogger(object):
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
-            if isinstance(v, torch2paddle.create_tensor):
-                v = v.item()
+            if isinstance(v, paddle.Tensor):
+                v = float(v.item())
             assert isinstance(v, (float, int))
             self.meters[k].update(v)
 
@@ -183,7 +188,7 @@ class MetricLogger(object):
         if paddle.is_compiled_with_cuda():
             log_msg = self.delimiter.join([header, '[{0' + space_fmt +
                 '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}',
-                'data: {data}', 'max mem: {memory:.0f}'])
+                'data: {data}'])
         else:
             log_msg = self.delimiter.join([header, '[{0' + space_fmt +
                 '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}',
@@ -199,7 +204,6 @@ class MetricLogger(object):
                 if paddle.is_compiled_with_cuda():
                     print(log_msg.format(i, len(iterable), eta=eta_string,
                         meters=str(self), time=str(iter_time), data=str(data_time)))
-                    '''memory=torch.cuda.max_memory_allocated()/ MB'''
                 else:
                     print(log_msg.format(i, len(iterable), eta=eta_string,
                         meters=str(self), time=str(iter_time), data=str(
@@ -331,7 +335,7 @@ def is_dist_avail_and_initialized():
     # if not paddle.distributed.is_initialized():
     #     return False
 
-    return True
+    return False
 
 
 def get_world_size():

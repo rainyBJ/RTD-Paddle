@@ -7,7 +7,8 @@ import paddle
 def prop_cl_to_se(x):
     c, l = x.unbind(-1)
     b = [c - 0.5 * l, c + 0.5 * l]
-    return paddle.stack(b, axis=-1).clamp(0, 1)
+    # return paddle.stack(b, axis=-1).clamp(0, 1)
+    return paddle.stack(b, axis=-1).clip(0, 1)
 
 
 def prop_se_to_cl(x):
@@ -27,7 +28,7 @@ def prop_relative_to_absolute(x, base, window_size, interval):
 def segment_tiou(box_a, box_b):
     N = box_a.shape[0]
     M = box_b.shape[0]
-    tiou = paddle.zeros((N, M)).requires_grad_(False).to(box_a.device)
+    tiou = paddle.zeros((N, M)).requires_grad_(False).to(box_a.cuda)
     for i in range(N):
         inter_max_xy = torch2paddle.min(box_a[i, 1], box_b[:, 1])
         inter_min_xy = torch2paddle.max(box_a[i, 0], box_b[:, 0])

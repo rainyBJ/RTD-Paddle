@@ -1,0 +1,102 @@
+Not using distributed mode
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+git:
+  sha: N/A, status: clean, branch: N/A
+
+Namespace(absolute_position=False, annotation_path='datasets/thumos14_anno_action.json', aux_loss=True, backbone='resnet50', batch_size=32, bbox_loss_coef=5, clip_max_norm=0.1, dataset_file='thumos14', dec_layers=6, device='cuda', dice_loss_coef=1, dim_feedforward=2048, dist_url='env://', distributed=False, dropout=0.1, enc_layers=3, eos_coef=0.1, epochs=20, eval=True, feature_path='data/I3D_features', frozen_weights=None, giou_loss_coef=2, gt_size=100, hidden_dim=512, interval=5, iou_loss_coef=100, load='', lr=0.0001, lr_backbone=1e-05, lr_drop=30, nheads=8, num_queries=32, num_workers=2, output_dir='outputs/', point_prob_normalize=True, position_embedding='sine', pre_norm=False, relax_rule='topk', relax_thresh=0.7, remove_difficult=False, resume='outputs/checkpoint_best_sum_ar.pth', seed=42, set_cost_bbox=5, set_cost_class=1, set_cost_giou=2, stage=3, start_epoch=0, tem_path='data/TEM_scores', weight_decay=0.0001, window_size=100, world_size=1)
+CUDAPlace(1)
+W1012 08:27:14.481206 14426 device_context.cc:404] Please NOTE: device: 1, GPU Compute Capability: 7.5, Driver API Version: 11.2, Runtime API Version: 10.2
+W1012 08:27:14.482693 14426 dynamic_loader.cc:267] The third-party dynamic library (libcudnn.so) that Paddle depends on is not configured correctly. (error code is libcudnn.so: cannot open shared object file: No such file or directory)
+  Suggestions:
+  1. Check if the third-party dynamic library (e.g. CUDA, CUDNN) is installed correctly and its version is matched with paddlepaddle you installed.
+  2. Configure third-party dynamic library environment variables as follows:
+  - Linux: set LD_LIBRARY_PATH by `export LD_LIBRARY_PATH=...`
+  - Windows: set PATH by `set PATH=XXX;
+Traceback (most recent call last):
+  File "/root/.pycharm_helpers/pydev/pydevd.py", line 1483, in _exec
+    pydev_imports.execfile(file, globals, locals)  # execute the script
+  File "/root/.pycharm_helpers/pydev/_pydev_imps/_pydev_execfile.py", line 18, in execfile
+    exec(compile(contents+"\n", file, 'exec'), glob, loc)
+  File "main.py", line 336, in <module>
+    main(args)
+  File "main.py", line 134, in main
+    model, criterion, postprocessors = build_model(args)
+  File "/root/baidu/RTD_W_P/models/__init__.py", line 5, in build_model
+    return build(args)
+  File "/root/baidu/RTD_W_P/models/rtd.py", line 282, in build
+    position_embedding = build_position_embedding(args)
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 57, in build_position_embedding
+    position_embedding = PositionEmbeddingSine(hidden_dim=args.
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 14, in __init__
+    self.register_buffer('position_table', self._get_encoding_table())
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 25, in _get_encoding_table
+    return torch2paddle.create_float32_tensor(table).unsqueeze(0)
+  File "/root/miniconda3/lib/python3.8/site-packages/x2paddle/project_convertor/pytorch/torch2paddle/ops.py", line 77, in create_float32_tensor
+    out = paddle.cast(out, "float32")
+  File "/root/miniconda3/lib/python3.8/site-packages/paddle/fluid/layers/tensor.py", line 231, in cast
+    out = core.ops.cast(x, 'in_dtype', x.dtype, 'out_dtype', dtype)
+RuntimeError: (PreconditionNotMet) Cannot load cudnn shared library. Cannot invoke method cudnnGetVersion.
+  [Hint: cudnn_dso_handle should not be null.] (at /paddle/paddle/fluid/platform/dynload/cudnn.cc:59)
+  [operator < cast > error]
+Not using distributed mode
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+git:
+  sha: N/A, status: clean, branch: N/A
+
+Namespace(absolute_position=False, annotation_path='datasets/thumos14_anno_action.json', aux_loss=True, backbone='resnet50', batch_size=32, bbox_loss_coef=5, clip_max_norm=0.1, dataset_file='thumos14', dec_layers=6, device='cuda', dice_loss_coef=1, dim_feedforward=2048, dist_url='env://', distributed=False, dropout=0.1, enc_layers=3, eos_coef=0.1, epochs=20, eval=True, feature_path='data/I3D_features', frozen_weights=None, giou_loss_coef=2, gt_size=100, hidden_dim=512, interval=5, iou_loss_coef=100, load='', lr=0.0001, lr_backbone=1e-05, lr_drop=30, nheads=8, num_queries=32, num_workers=2, output_dir='outputs/', point_prob_normalize=True, position_embedding='sine', pre_norm=False, relax_rule='topk', relax_thresh=0.7, remove_difficult=False, resume='outputs/checkpoint_best_sum_ar.pth', seed=42, set_cost_bbox=5, set_cost_class=1, set_cost_giou=2, stage=3, start_epoch=0, tem_path='data/TEM_scores', weight_decay=0.0001, window_size=100, world_size=1)
+CUDAPlace(1)
+W1012 08:32:08.689280 15228 device_context.cc:404] Please NOTE: device: 1, GPU Compute Capability: 7.5, Driver API Version: 11.2, Runtime API Version: 10.2
+W1012 08:32:08.689770 15228 dynamic_loader.cc:267] The third-party dynamic library (libcudnn.so) that Paddle depends on is not configured correctly. (error code is libcudnn.so: cannot open shared object file: No such file or directory)
+  Suggestions:
+  1. Check if the third-party dynamic library (e.g. CUDA, CUDNN) is installed correctly and its version is matched with paddlepaddle you installed.
+  2. Configure third-party dynamic library environment variables as follows:
+  - Linux: set LD_LIBRARY_PATH by `export LD_LIBRARY_PATH=...`
+  - Windows: set PATH by `set PATH=XXX;
+Traceback (most recent call last):
+  File "/root/.pycharm_helpers/pydev/pydevd.py", line 1483, in _exec
+    pydev_imports.execfile(file, globals, locals)  # execute the script
+  File "/root/.pycharm_helpers/pydev/_pydev_imps/_pydev_execfile.py", line 18, in execfile
+    exec(compile(contents+"\n", file, 'exec'), glob, loc)
+  File "main.py", line 336, in <module>
+    main(args)
+  File "main.py", line 134, in main
+    model, criterion, postprocessors = build_model(args)
+  File "/root/baidu/RTD_W_P/models/__init__.py", line 5, in build_model
+    return build(args)
+  File "/root/baidu/RTD_W_P/models/rtd.py", line 282, in build
+    position_embedding = build_position_embedding(args)
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 57, in build_position_embedding
+    position_embedding = PositionEmbeddingSine(hidden_dim=args.
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 14, in __init__
+    self.register_buffer('position_table', self._get_encoding_table())
+  File "/root/baidu/RTD_W_P/models/position_embedding.py", line 25, in _get_encoding_table
+    return torch2paddle.create_float32_tensor(table).unsqueeze(0)
+  File "/root/miniconda3/lib/python3.8/site-packages/x2paddle/project_convertor/pytorch/torch2paddle/ops.py", line 77, in create_float32_tensor
+    out = paddle.cast(out, "float32")
+  File "/root/miniconda3/lib/python3.8/site-packages/paddle/fluid/layers/tensor.py", line 231, in cast
+    out = core.ops.cast(x, 'in_dtype', x.dtype, 'out_dtype', dtype)
+RuntimeError: (PreconditionNotMet) Cannot load cudnn shared library. Cannot invoke method cudnnGetVersion.
+  [Hint: cudnn_dso_handle should not be null.] (at /paddle/paddle/fluid/platform/dynload/cudnn.cc:59)
+  [operator < cast > error]
+Not using distributed mode
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+git:
+  sha: N/A, status: clean, branch: N/A
+
+Namespace(absolute_position=False, annotation_path='datasets/thumos14_anno_action.json', aux_loss=True, backbone='resnet50', batch_size=32, bbox_loss_coef=5, clip_max_norm=0.1, dataset_file='thumos14', dec_layers=6, device='cuda', dice_loss_coef=1, dim_feedforward=2048, dist_url='env://', distributed=False, dropout=0.1, enc_layers=3, eos_coef=0.1, epochs=20, eval=True, feature_path='data/I3D_features', frozen_weights=None, giou_loss_coef=2, gt_size=100, hidden_dim=512, interval=5, iou_loss_coef=100, load='', lr=0.0001, lr_backbone=1e-05, lr_drop=30, nheads=8, num_queries=32, num_workers=2, output_dir='outputs/', point_prob_normalize=True, position_embedding='sine', pre_norm=False, relax_rule='topk', relax_thresh=0.7, remove_difficult=False, resume='outputs/checkpoint_best_sum_ar.pth', seed=42, set_cost_bbox=5, set_cost_class=1, set_cost_giou=2, stage=3, start_epoch=0, tem_path='data/TEM_scores', weight_decay=0.0001, window_size=100, world_size=1)
+CUDAPlace(1)
+W1013 01:06:15.994781 25312 device_context.cc:404] Please NOTE: device: 1, GPU Compute Capability: 7.5, Driver API Version: 11.2, Runtime API Version: 10.1
+W1013 01:06:17.297552 25312 device_context.cc:422] device: 1, cuDNN Version: 7.6.
+Traceback (most recent call last):
+  File "main.py", line 336, in <module>
+    main(args)
+  File "main.py", line 134, in main
+    model, criterion, postprocessors = build_model(args)
+  File "/root/baidu/RTD_W_P/models/__init__.py", line 5, in build_model
+    return build(args)
+  File "/root/baidu/RTD_W_P/models/rtd.py", line 283, in build
+    transformer = build_transformer(args)
+KeyboardInterrupt

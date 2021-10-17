@@ -16,7 +16,6 @@ from collections import deque
 from typing import List
 from typing import Optional
 import x2paddle.torch2paddle as dist
-import torchvision
 from x2paddle.torch2paddle import create_tensor
 
 '''
@@ -236,12 +235,12 @@ def get_sha():
     message = f'sha: {sha}, status: {diff}, branch: {branch}'
     return message
 
-
+'''
 def collate_fn(batch):
     batch = list(zip(*batch))
     batch[0] = nested_tensor_from_tensor_list(batch[0])
     return tuple(batch)
-
+'''
 
 def _max_by_axis(the_list):
     maxes = the_list[0]
@@ -250,7 +249,7 @@ def _max_by_axis(the_list):
             maxes[index] = max(maxes[index], item)
     return maxes
 
-
+'''
 def nested_tensor_from_tensor_list(tensor_list: List[create_tensor]):
     if tensor_list[0].ndim == 3:
         if torchvision._is_tracing():
@@ -268,7 +267,7 @@ def nested_tensor_from_tensor_list(tensor_list: List[create_tensor]):
     else:
         raise ValueError('not supported')
     return NestedTensor(tensor, mask)
-
+'''
 
 def _onnx_nested_tensor_from_tensor_list(tensor_list):
     max_size = []

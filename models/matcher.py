@@ -69,7 +69,7 @@ class HungarianMatcher(nn.Layer):
         # 暂时用 scipy 库解决 cdist
         out_bbox_np = out_bbox.numpy()
         prop_data_np = prop_data.numpy()
-        cost_bbox_np = cdist(out_bbox_np, prop_data_np,'minkowski', p=1)
+        cost_bbox_np = cdist(out_bbox_np, prop_data_np,'minkowski', p=1).astype("float32")
         cost_bbox = paddle.to_tensor(cost_bbox_np)
 
         cost_giou = -generalized_prop_iou(prop_cl_to_se(out_bbox), tgt_bbox)

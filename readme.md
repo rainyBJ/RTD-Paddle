@@ -12,6 +12,10 @@ This project reproduces RTD based on paddlepaddle framework. RTD is a simple and
 
 https://github.com/MCG-NJU/RTD-Action
 
+### **The link of aistudio：**
+
+https://aistudio.baidu.com/aistudio/projectdetail/2470811
+
 ## 2 Accuracy
 
 | Dataset  | AR@50 | AR@100 | AR@200 | AR@500 | checkpoint                                                   |
@@ -34,3 +38,25 @@ To reproduce the results in THUMOS14 without further changes:
 ## 5 Quick start
 
 ### step1: clone
+
+gi t clone git@github.com:rainyBJ/RTD_RePro.git
+
+### step2: prepare dataset
+
+1. according to 3
+2. Use **dataset_converter.py** converting it to the paddle form
+
+### step3:download chkpt
+
+1. Download **checkpoint_best_sum_ar.pth** from [link](https://drive.google.com/file/d/1h20GnPhaJP3QkwVspn_ndXevJ97FGpE6/view?usp=sharing)
+
+2. Use **chkpt_converter.py** converting it to the paddle form **checkpoint_best_sum_ar.pdparams**
+
+### step4:test
+
+```bash
+python -m main --window_size 100 --batch_size 32 --lr 1e-4 --stage 3 --epochs 20 --num_queries 32 --point_prob_normalize --eval --resume checkpoint_best_sum_ar.pdparams 
+```
+
+
+

@@ -20,7 +20,7 @@ def prop_se_to_cl(x):
 def prop_relative_to_absolute(x, base, window_size, interval):
     s, e = x.unbind(-1)
     num_samples = s.shape[1]
-    base = base.unsqueeze(1).repeat(1, num_samples).cuda()
+    base = base.unsqueeze(1).repeat(1, num_samples).cuda().cast("float32")
     b = [s * window_size * interval + base, e * window_size * interval + base]
     return paddle.stack(b, axis=-1)
 

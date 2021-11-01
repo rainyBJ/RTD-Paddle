@@ -4,13 +4,15 @@ import torch
 # convert torch.pth to paddle.pdparams
 chkpt_path = 'checkpoint_best_sum_ar.pth'
 paddle_chkpt_path = "checkpoint_best_sum_ar.pdparams"
+# chkpt_path = 'checkpoint_initial.pth'
+# paddle_chkpt_path = "checkpoint_initial.pdparams"
 
 paddle_dict = {}
 params_dict = {}
 torch_checkpoint = torch.load(chkpt_path)
 
-start_epoch = torch_checkpoint['epoch']
-paddle_dict['epoch'] = start_epoch
+# start_epoch = torch_checkpoint['epoch']
+# paddle_dict['epoch'] = start_epoch
 pretrained_dict = torch_checkpoint['model']
 
 # fc layer, weight needs to be tansposed
@@ -69,6 +71,7 @@ print("{} FC Layer Params Transposed".format(count_fc))
 print("{} in_proj Params Transformed".format(count_in_proj))
 
 paddle_dict['model'] = params_dict
+paddle_dict['epoch'] = torch_checkpoint["epoch"]
 paddle.save(paddle_dict,paddle_chkpt_path)
 
 paddle_checkpoint = paddle.load(paddle_chkpt_path)

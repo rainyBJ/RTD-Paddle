@@ -1,11 +1,3 @@
-"""Misc functions, including distributed helpers.
-
-Mostly copy-paste from torchvision references.
-"""
-import numpy
-import paddle
-import x2paddle
-from x2paddle import torch2paddle
 import datetime
 import os
 import pickle
@@ -15,8 +7,10 @@ from collections import defaultdict
 from collections import deque
 from typing import List
 from typing import Optional
-import x2paddle.torch2paddle as dist
-from x2paddle.torch2paddle import create_tensor
+# import torchvision
+import numpy as np
+import paddle
+
 
 '''
 if float(torchvision.__version__[:3]) < 0.7:
@@ -25,8 +19,6 @@ if float(torchvision.__version__[:3]) < 0.7:
 '''
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
-    window or the global series average."""
 
     def __init__(self, window_size=20, fmt=None):
         if fmt is None:
@@ -42,13 +34,11 @@ class SmoothedValue(object):
         self.total += value * n
 
     def synchronize_between_processes(self):
-        """
-        Warning: does not synchronize the deque!
-        """
         if not is_dist_avail_and_initialized():
             return
-        t = paddle.to_tensor([self.count, self.total], dtype=paddle.float64,
-            device='cuda')
+        t = paddle.to_tensor([self.count, self.total],
+                             dtype=paddle.float64,
+                             device='cuda')
         paddle.distributed.barrier()
         paddle.distributed.all_reduce(t)
         t = t.tolist()
@@ -58,9 +48,11 @@ class SmoothedValue(object):
     @property
     def median(self):
         data = list(self.deque)
-        data_np = numpy.median(numpy.array(data))
-        d = float(paddle.to_tensor(data_np).item())
-        return d
+        data_np = np.median(np.array(data))
+        d_tensor = float(paddle.to_tensor(data_np).item())
+        # d = paddle.to_tensor(data)
+        # d_tensor = paddle.median(d)
+        return d_tensor
 
     @property
     def avg(self):
@@ -80,27 +72,23 @@ class SmoothedValue(object):
         return self.deque[-1]
 
     def __str__(self):
-        # return self.fmt.format(median=self.median, avg=self.avg, global_avg
-        #     =self.global_avg, max=self.max, value=self.value)
-        return self.fmt.format(median=self.median, avg=self.avg, global_avg
-        =self.global_avg, max=self.max, value=self.value)
-
+        return self.fmt.format(median=self.median,
+                               avg=self.avg,
+                               global_avg=self.global_avg,
+                               max=self.max,
+                               value=self.value)
 
 
 def all_gather(data):
-    """
-    Run all_gather on arbitrary picklable data (not necessarily tensors)
-    Args:
-        data: any picklable object
-    Returns:
-        list[data]: list of data gathered from each rank
-    """
     world_size = get_world_size()
     if world_size == 1:
         return [data]
+
     buffer = pickle.dumps(data)
-    storage = torch2paddle.ByteStorage.from_buffer(buffer)
-    tensor = torch2paddle.create_uint8_tensor(storage).to('cuda')
+    nparr = np.frombuffer(buffer, dtype=np.uint8)
+    tensor = paddle.to_tensor(nparr, dtype=paddle.uint8).to('cuda')
+    #storage = paddorch.ByteStorage.from_buffer(buffer)
+    #tensor = torch2paddle.create_uint8_tensor(storage).to('cuda')
     local_size = paddle.to_tensor([tensor.numel()], device='cuda')
     size_list = [paddle.to_tensor([0], device='cuda') for _ in range(
         world_size)]
@@ -114,7 +102,7 @@ def all_gather(data):
     if local_size != max_size:
         padding = paddle.empty(shape=(max_size - local_size,), dtype=paddle
             .uint8)
-        tensor = torch2paddle.concat((tensor, padding), dim=0)
+        tensor = paddle.concat((tensor, padding), dim=0)
     paddle.distributed.all_gather(tensor_list, tensor)
     data_list = []
     for size, tensor in zip(size_list, tensor_list):
@@ -130,6 +118,7 @@ def reduce_dict(input_dict, average=True):
     with paddle.no_grad():
         names = []
         values = []
+
         for k in sorted(input_dict.keys()):
             names.append(k)
             values.append(input_dict[k])
@@ -142,16 +131,16 @@ def reduce_dict(input_dict, average=True):
 
 
 class MetricLogger(object):
-
     def __init__(self, delimiter='\t'):
         self.meters = defaultdict(SmoothedValue)
         self.delimiter = delimiter
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
-            if isinstance(v, paddle.Tensor):
-                v = float(v.item())
-            assert isinstance(v, (float, int))
+            #if isinstance(v, paddle.Tensor):
+            if not isinstance(v, (float, int)):
+                v = v.item()
+            #assert isinstance(v, (float, int))
             self.meters[k].update(v)
 
     def __getattr__(self, attr):
@@ -188,6 +177,7 @@ class MetricLogger(object):
             log_msg = self.delimiter.join([header, '[{0' + space_fmt +
                 '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}',
                 'data: {data}'])
+            #'max mem: {memory:.0f}'])
         else:
             log_msg = self.delimiter.join([header, '[{0' + space_fmt +
                 '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}',
@@ -201,12 +191,21 @@ class MetricLogger(object):
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if paddle.is_compiled_with_cuda():
-                    print(log_msg.format(i, len(iterable), eta=eta_string,
-                        meters=str(self), time=str(iter_time), data=str(data_time)))
+                    print(
+                        log_msg.format(
+                            i,
+                            len(iterable),
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time)))
                 else:
-                    print(log_msg.format(i, len(iterable), eta=eta_string,
-                        meters=str(self), time=str(iter_time), data=str(
-                        data_time)))
+                    print(log_msg.format(i,
+                                         len(iterable),
+                                         eta=eta_string,
+                                         meters=str(self),
+                                         time=str(iter_time),
+                                         data=str(data_time)))
             i += 1
             end = time.time()
         total_time = time.time() - start_time
@@ -219,8 +218,9 @@ def get_sha():
     cwd = os.path.dirname(os.path.abspath(__file__))
 
     def _run(command):
-        return subprocess.check_output(command, cwd=cwd).decode('ascii').strip(
-            )
+        return subprocess.check_output(command,
+                                       cwd=cwd).decode('ascii').strip()
+
     sha = 'N/A'
     diff = 'clean'
     branch = 'N/A'
@@ -235,12 +235,12 @@ def get_sha():
     message = f'sha: {sha}, status: {diff}, branch: {branch}'
     return message
 
-'''
+
 def collate_fn(batch):
     batch = list(zip(*batch))
     batch[0] = nested_tensor_from_tensor_list(batch[0])
     return tuple(batch)
-'''
+
 
 def _max_by_axis(the_list):
     maxes = the_list[0]
@@ -249,12 +249,14 @@ def _max_by_axis(the_list):
             maxes[index] = max(maxes[index], item)
     return maxes
 
-'''
-def nested_tensor_from_tensor_list(tensor_list: List[create_tensor]):
+
+def nested_tensor_from_tensor_list(tensor_list: List[paddle.Tensor]):
     if tensor_list[0].ndim == 3:
         if torchvision._is_tracing():
             return _onnx_nested_tensor_from_tensor_list(tensor_list)
+
         max_size = _max_by_axis([list(img.shape) for img in tensor_list])
+
         batch_shape = [len(tensor_list)] + max_size
         b, c, h, w = batch_shape
         dtype = tensor_list[0].dtype
@@ -267,15 +269,17 @@ def nested_tensor_from_tensor_list(tensor_list: List[create_tensor]):
     else:
         raise ValueError('not supported')
     return NestedTensor(tensor, mask)
-'''
+
 
 def _onnx_nested_tensor_from_tensor_list(tensor_list):
     max_size = []
     for i in range(tensor_list[0].dim()):
-        max_size_i = torch2paddle.max(paddle.stack([img.shape[i] for img in
-            tensor_list]).to(paddle.float32)).to(paddle.int64)
+        max_size_i = paddle.max(
+            paddle.stack([img.shape[i]
+                          for img in tensor_list]).to(paddle.float32)).to(paddle.int64)
         max_size.append(max_size_i)
     max_size = tuple(max_size)
+
     padded_imgs = []
     padded_masks = []
     for img in tensor_list:
@@ -283,18 +287,21 @@ def _onnx_nested_tensor_from_tensor_list(tensor_list):
         padded_img = paddle.nn.functional.pad(img, (0, padding[2], 0,
             padding[1], 0, padding[0]))
         padded_imgs.append(padded_img)
+
         m = paddle.full_like(img[0], dtype=paddle.int32).requires_grad_(False)
-        padded_mask = paddle.nn.functional.pad(m, (0, padding[2], 0,
-            padding[1]), 'constant', 1)
+        padded_mask = paddle.nn.functional.pad(m,
+                                               (0, padding[2], 0, padding[1]),
+                                               'constant', 1)
         padded_masks.append(padded_mask.to(paddle.bool))
+
     tensor = paddle.stack(padded_imgs)
     mask = paddle.stack(padded_masks)
+
     return NestedTensor(tensor, mask=mask)
 
 
 class NestedTensor(object):
-
-    def __init__(self, tensors, mask: Optional[create_tensor]):
+    def __init__(self, tensors, mask: Optional[paddle.Tensor]):
         self.tensors = tensors
         self.mask = mask
 
@@ -316,7 +323,6 @@ class NestedTensor(object):
 
 
 def setup_for_distributed(is_master):
-    """This function disables printing when not in master process."""
     import builtins as __builtin__
     builtin_print = __builtin__.print
 
@@ -328,12 +334,10 @@ def setup_for_distributed(is_master):
 
 
 def is_dist_avail_and_initialized():
-
     # if not paddle.distributed.is_available():
     #     return False
     # if not paddle.distributed.is_initialized():
     #     return False
-
     return False
 
 
@@ -355,7 +359,8 @@ def is_main_process():
 
 def save_on_master(*args, **kwargs):
     if is_main_process():
-        x2paddle.torch2paddle.save(*args, **kwargs)
+        # x2paddle.torch2paddle.save(*args, **kwargs)
+        paddle.save(*args, **kwargs)
 
 
 def init_distributed_mode(args):
@@ -365,36 +370,43 @@ def init_distributed_mode(args):
         args.gpu = int(os.environ['LOCAL_RANK'])
     elif 'SLURM_PROCID' in os.environ:
         args.rank = int(os.environ['SLURM_PROCID'])
-        args.gpu = args.rank % torch2paddle.device_count()
+        # args.gpu = args.rank % torch2paddle.device_count()
     else:
-        print('Not using distributed mode')
+        print('Using distributed mode')
         args.distributed = False
         return
+
     args.distributed = True
-    torch2paddle.set_cuda_device(args.gpu)
-    args.dist_backend = 'nccl'
-    print('| distributed init (rank {}): {}'.format(args.rank, args.
-        dist_url), flush=True)
-    torch2paddle.init_process_group(backend=args.dist_backend, init_method=\
-        args.dist_url, world_size=args.world_size, rank=args.rank)
-    paddle.distributed.barrier()
-    setup_for_distributed(args.rank == 0)
+
+    # torch2paddle.set_cuda_device(args.gpu)
+    # args.dist_backend = 'nccl'
+    # print('| distributed init (rank {}): {}'.format(args.rank, args.
+    #     dist_url), flush=True)
+    # torch2paddle.init_process_group(backend=args.dist_backend,
+    #                                 init_method=args.dist_url,
+    #                                 world_size=args.world_size,
+    #                                 rank=args.rank)
+    # paddle.distributed.barrier()
+    # setup_for_distributed(args.rank == 0)
 
 
 @paddle.no_grad()
 def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k."""
     if target.numel() == 0:
         return [paddle.zeros([]).requires_grad_(False)]
     maxk = max(topk)
-    batch_size = target.size(0)
+    # batch_size = target.size(0)
+    batch_size = target.size
+
     _, pred = output.topk(maxk, 1, True, True)
     pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
+    correct = pred.equal(target.reshape([1, -1]).expand_as(pred))
+
     res = []
     for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0)
-        res.append(correct_k.mul_(100.0 / batch_size))
+        correct_k = correct[:k].reshape([-1]).sum(0).astype("float32")
+        foo = paddle.to_tensor(100.0 / batch_size)
+        res.append(correct_k.multiply(foo))
     return res
 
 '''

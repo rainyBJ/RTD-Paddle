@@ -59,5 +59,28 @@ sh val.sh
 sh run.sh
 ```
 
+## 6 AI Studio
 
+### link
 
+[AI Studio 项目](https://aistudio.baidu.com/aistudio/projectdetail/2559085?shared=1)（2.2.0rc0）
+
+### dataset
+
+unzip ~/data/data112050/归档.zip -d ~/work/data_paddle/
+
+### chkpt
+
+cp ~/data/data114662/* ~/work
+
+### eval
+
+sh val.sh
+
+### train
+
+sh train.sh
+
+---
+
+see logs in folder ./log/xxx.log

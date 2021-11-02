@@ -4,7 +4,7 @@ import json
 import random
 import time
 from pathlib import Path
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import os
 import paddle
@@ -74,7 +74,7 @@ def get_args_parser():
     parser.add_argument('--interval', default=5, type=int)
     parser.add_argument('--gt_size', default=100, type=int)
     parser.add_argument('--feature_path', default='./data_paddle/I3D_features', type=str)
-    parser.add_argument('--tem_path', default='./data/TEM_scores', type=str)
+    parser.add_argument('--tem_path', default='./data_paddle/TEM_scores', type=str)
     parser.add_argument('--annotation_path', default='./datasets/thumos14_anno_action.json', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
     parser.add_argument('--point_prob_normalize', action='store_true')
@@ -142,15 +142,18 @@ def main(args):
     # model.to(device)
     model_without_ddp = model
     # initialize parameters with torch_params
-    initial_param_path = 'checkpoint_initial.pdparams'
-    print("=> loading initial checkpoint '{}'".format(initial_param_path))
-    checkpoint = paddle.load(initial_param_path)
-    torch_init_dict = checkpoint['model']
-    model_dict = model_without_ddp.state_dict()
-    torch_init_dict = {k: v for k, v in torch_init_dict.items() if k in model_dict}
-    model_dict.update(torch_init_dict)
-    model_without_ddp.load_dict(model_dict)
-    print("=> loaded '{}' ".format(initial_param_path))
+    if args.load or args.resume:
+        pass
+    else:
+        initial_param_path = 'checkpoint_initial.pdparams'
+        print("=> loading initial checkpoint '{}'".format(initial_param_path))
+        checkpoint = paddle.load(initial_param_path)
+        torch_init_dict = checkpoint['model']
+        model_dict = model_without_ddp.state_dict()
+        torch_init_dict = {k: v for k, v in torch_init_dict.items() if k in model_dict}
+        model_dict.update(torch_init_dict)
+        model_without_ddp.load_dict(model_dict)
+        print("=> loaded '{}' ".format(initial_param_path))
 
     if args.distributed:
         model = paddle.DataParallel(model, find_unused_parameters=True)
@@ -309,7 +312,10 @@ def main(args):
     test_stats_list = {}
     best_ar50 = 0
     best_sum_ar = 0
+
+    cnt = 0
     for epoch in range(args.start_epoch, args.epochs):
+        cnt = cnt + 1
         if args.distributed:
             sampler_train.set_epoch(epoch)
         # paddle.device.cuda.empty_cache()
@@ -324,8 +330,8 @@ def main(args):
                     train_loss_list[key] = [value.mean()]
 
         lr_scheduler.step()
-        if epoch % 50 == 0 and args.output_dir:
-            checkpoint_path = (output_dir / 'checkpoint_epoch{}.pdparams'.format(epoch))
+        if epoch % 10 == 0 and args.output_dir:
+            checkpoint_path = os.path.join(output_dir / 'checkpoint_epoch{}.pdparams'.format(epoch))
             utils.save_on_master({'model': model_without_ddp.state_dict(),
                                   'optimizer': optimizer.state_dict(),
                                   'lr_scheduler': lr_scheduler.state_dict(),
@@ -343,59 +349,59 @@ def main(args):
                                       'lr_scheduler': lr_scheduler.state_dict(),
                                       'epoch': epoch,
                                       'args': args}, checkpoint_path)
-
-        evaluator, eval_loss_dict = evaluate(model, criterion, postprocessors,
-                                             data_loader_val, device, args)
-        res = evaluator.summarize()
-        test_stats, results_pd = eval_props(res)
-        for k, v in test_stats.items():
-            try:
-                test_stats_list[k].append(float(v) * 100)
-            except KeyError:
-                test_stats_list[k] = [float(v) * 100]
-
-        for key, value in eval_loss_dict.items():
-            if key in ['loss_ce', 'loss_bbox', 'loss_giou', 'cardinality_error', 'class_error', 'loss_iou']:
+        if cnt % 5 == 0: # eval every 5 epochs
+            evaluator, eval_loss_dict = evaluate(model, criterion, postprocessors,
+                                                 data_loader_val, device, args)
+            res = evaluator.summarize()
+            test_stats, results_pd = eval_props(res)
+            for k, v in test_stats.items():
                 try:
-                    eval_loss_list[key].append(value.mean())
+                    test_stats_list[k].append(float(v) * 100)
                 except KeyError:
-                    eval_loss_list[key] = [value.mean()]
+                    test_stats_list[k] = [float(v) * 100]
 
-        print('test_stats', test_stats)
+            for key, value in eval_loss_dict.items():
+                if key in ['loss_ce', 'loss_bbox', 'loss_giou', 'cardinality_error', 'class_error', 'loss_iou']:
+                    try:
+                        eval_loss_list[key].append(value.mean())
+                    except KeyError:
+                        eval_loss_list[key] = [value.mean()]
 
-        log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                     **{f'test_AR@{k}': v for k, v in test_stats.items()},
-                     'epoch': epoch,
-                     'n_parameters': n_parameters}
+            print('test_stats', test_stats)
 
-        if float(test_stats['50']) > best_ar50:
-            best_ar50 = float(test_stats['50'])
-            with (output_dir / 'log_best_ar50.txt').open('w') as f:
-                f.write(json.dumps(log_stats) + '\n')
-            checkpoint_path = os.path.join(output_dir, 'checkpoint_best_ar50.pdparams')
-            utils.save_on_master({'model': model_without_ddp.state_dict(),
-                                  'optimizer': optimizer.state_dict(),
-                                  'lr_scheduler': lr_scheduler.state_dict(),
-                                  'epoch': epoch,
-                                  'args': args}, checkpoint_path)
+            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                         **{f'test_AR@{k}': v for k, v in test_stats.items()},
+                         'epoch': epoch,
+                         'n_parameters': n_parameters}
 
-        current_sum_ar = float(test_stats['50']) + float(test_stats['100']) + float(test_stats['200'])
-        if current_sum_ar > best_sum_ar:
-            best_sum_ar = current_sum_ar
-            with (output_dir / 'log_best_sum_ar.txt').open('w') as f:
-                f.write(json.dumps(log_stats) + '\n')
-            checkpoint_path = os.path.join(output_dir, 'checkpoint_best_sum_ar.pdparams')
-            utils.save_on_master({'model': model_without_ddp.state_dict(),
-                                  'optimizer': optimizer.state_dict(),
-                                  'lr_scheduler': lr_scheduler.state_dict(),
-                                  'epoch': epoch,
-                                  'args': args}, checkpoint_path)
+            if float(test_stats['50']) > best_ar50:
+                best_ar50 = float(test_stats['50'])
+                with (output_dir / 'log_best_ar50.txt').open('w') as f:
+                    f.write(json.dumps(log_stats) + '\n')
+                checkpoint_path = os.path.join(output_dir, 'checkpoint_best_ar50.pdparams')
+                utils.save_on_master({'model': model_without_ddp.state_dict(),
+                                      'optimizer': optimizer.state_dict(),
+                                      'lr_scheduler': lr_scheduler.state_dict(),
+                                      'epoch': epoch,
+                                      'args': args}, checkpoint_path)
 
-        if args.output_dir and utils.is_main_process():
-            with (output_dir / 'log.txt').open('a') as f:
-                f.write(json.dumps(log_stats) + '\n')
+            current_sum_ar = float(test_stats['50']) + float(test_stats['100']) + float(test_stats['200'])
+            if current_sum_ar > best_sum_ar:
+                best_sum_ar = current_sum_ar
+                with (output_dir / 'log_best_sum_ar.txt').open('w') as f:
+                    f.write(json.dumps(log_stats) + '\n')
+                checkpoint_path = os.path.join(output_dir, 'checkpoint_best_sum_ar.pdparams')
+                utils.save_on_master({'model': model_without_ddp.state_dict(),
+                                      'optimizer': optimizer.state_dict(),
+                                      'lr_scheduler': lr_scheduler.state_dict(),
+                                      'epoch': epoch,
+                                      'args': args}, checkpoint_path)
 
-        epoch_list.append(epoch)
+            if args.output_dir and utils.is_main_process():
+                with (output_dir / 'log.txt').open('a') as f:
+                    f.write(json.dumps(log_stats) + '\n')
+
+        # epoch_list.append(epoch)
         # if epoch % 2 == 0:
         #     draw_stats(axs_test, test_stats_list, epoch_list, colordict)
         #     axs_test.legend()

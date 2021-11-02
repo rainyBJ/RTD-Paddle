@@ -34,7 +34,7 @@ def train_one_epoch(model: paddle.nn.Layer,
             'class_error', utils.SmoothedValue(window_size=1,
                                                fmt='{value:.2f}'))
     header = 'Epoch: [{}]'.format(epoch)
-    print_freq = 1
+    print_freq = 5
 
     max_norm = args.clip_max_norm
 
@@ -88,7 +88,7 @@ def train_one_epoch(model: paddle.nn.Layer,
             metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.get_lr())
 
-        # if cnt == 4:
+        # if cnt == 3:
         #     break
 
     metric_logger.synchronize_between_processes()
@@ -116,7 +116,7 @@ def evaluate(model, criterion, postprocessors, data_loader, device, args):
 
     cnt = 0
     for vid_name_list, locations, samples, targets, num_frames, base, s_e_scores in metric_logger.log_every(
-            data_loader, 1, header):
+            data_loader, 10, header):
 
         cnt = cnt + 1
         targets = [{k: v for k, v in t.items()} for t in targets]

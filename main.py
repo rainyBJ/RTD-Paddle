@@ -192,10 +192,16 @@ def main(args):
                              model_without_ddp.parameters())
         learned_params = list(head_params)
 
-    optimizer = paddle.optimizer.AdamW(learning_rate=args.lr,
+    lr_scheduler = paddle.optimizer.lr.StepDecay(learning_rate=args.lr, step_size=args.lr_drop)
+    optimizer = paddle.optimizer.AdamW(learning_rate=lr_scheduler,
                                        parameters=learned_params,
                                        weight_decay=args.weight_decay)
-    lr_scheduler = paddle.optimizer.lr.StepDecay(learning_rate=args.lr, step_size=args.lr_drop)
+
+    # resume from 30 epoch
+#     optimizer = paddle.optimizer.AdamW(learning_rate=args.lr,
+#                                        parameters=learned_params,
+#                                        weight_decay=args.weight_decay)
+
 
     # Plot lr schedule
     # y = []
@@ -245,10 +251,15 @@ def main(args):
             checkpoint = paddle.load(args.resume)
             args.start_epoch = checkpoint['epoch']
             pretrained_dict = checkpoint['model']
+            optimizer_dict = checkpoint['optimizer']
             model_dict = model_without_ddp.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
             model_dict.update(pretrained_dict)
             model_without_ddp.load_dict(model_dict)
+            # 正确的逻辑
+            # optimizer.set_state_dict(optimizer_dict) # 之前 optimizer 没有用到 lrscheduler，正确的应该有这一项的；跑完 50 epoch 之后
+            # 直接设置learning rate具体数字，先这样子做
+            optimizer.set_state_dict(optimizer_dict)
             print("=> loaded '{}' (epoch {})".format(args.resume,
                                                      checkpoint['epoch']))
 
@@ -341,15 +352,15 @@ def main(args):
         if args.output_dir:
             checkpoint_paths = [os.path.join(output_dir, 'checkpoint.pdparams')]
             if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 100 == 0:
-                checkpoint_paths.append(output_dir /
-                                        f'checkpoint{epoch:04}.pdparams')
+                checkpoint_paths.append(os.path.join(output_dir /
+                                        f'checkpoint{epoch:04}.pdparams'))
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({'model': model_without_ddp.state_dict(),
                                       'optimizer': optimizer.state_dict(),
                                       'lr_scheduler': lr_scheduler.state_dict(),
                                       'epoch': epoch,
                                       'args': args}, checkpoint_path)
-        if cnt % 5 == 0: # eval every 5 epochs
+        if cnt % 2 == 0: # eval every 2 epochs
             evaluator, eval_loss_dict = evaluate(model, criterion, postprocessors,
                                                  data_loader_val, device, args)
             res = evaluator.summarize()

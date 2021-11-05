@@ -140,7 +140,7 @@ class HungarianMatcher(nn.Layer):
                                 result_indices[batch_id][1], i)
 
                 elif self.relax_rule == 'topk':
-                    pred_idx = paddle.to_tensor(tiou).argsort(dim=1)[:, -self.relax_topk:].reshape(-1).tolist()
+                    pred_idx = paddle.to_tensor(tiou).argsort(axis=1)[:, -self.relax_topk:].reshape([-1]).tolist()
                     for i in range(len(pred_idx)):
                         if pred_idx[i] not in result_indices[batch_id][0]:
                             result_indices[batch_id][0] = np.append(

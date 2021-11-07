@@ -16,9 +16,11 @@ https://github.com/MCG-NJU/RTD-Action
 
 | Dataset                                 | AR@50 | AR@100 | AR@200 | AR@500 | checkpoint                                                   |
 | --------------------------------------- | ----- | ------ | ------ | ------ | ------------------------------------------------------------ |
-| THUMOS14 (eval every 1 epoch, PyTorch)  | 41.14 | 49.49  | 56.46  | 62.90  | [link](https://drive.google.com/file/d/1h20GnPhaJP3QkwVspn_ndXevJ97FGpE6/view?usp=sharing)(PyTorch) |
+| THUMOS14 (eval every 1 epoch, PyTorch)  | 41.52 | 49.33  | 56.41  | 62.91  | [link](https://drive.google.com/file/d/1h20GnPhaJP3QkwVspn_ndXevJ97FGpE6/view?usp=sharing)(PyTorch) |
 | THUMOS14 (eval every 2 epochs, PyTorch) | 40.66 | 48.58  | 55.21  | 61.90  | ./log/torch_best_sum_ar.txt                                  |
 | THUMOS14 (eval every 2 epochs, Paddle)  | 40.04 | 48.15  | 54.79  | 61.55  | ./log/paddle_beast_sum_ar.txt                                |
+| THUMOS14 (eval every 1 epoch, PyTorch)  | 40.13 | 48.73  | 55.98  | 62.09  | ./log/torch_best_sum_ar_eval1.txt                            |
+| THUMOS14 (eval every 1 epoch, Paddle)   | 40.23 | 48.66  | 55.24  | 62.22  | ./log/paddle_beast_sum_ar_eval1.txt                          |
 
 ## 3 Dataset
 
